@@ -22,7 +22,7 @@ resource "aws_security_group" "default" {
 
 resource "aws_db_subnet_group" "default" {
   name       = "main-subnet-group"
-  subnet_ids = ["${aws_subnet.private.*.id}"]
+  subnet_ids = "${aws_subnet.private.*.id}"
 
   tags = {
     Name = "${var.name}"
@@ -49,7 +49,6 @@ resource "aws_db_instance" "default" {
   engine            = "mysql"
   engine_version    = "8.0"
   instance_class    = "db.t2.micro"
-  name              = "${var.name}-db"
   username          = var.db_username
   password          = var.db_password
   vpc_security_group_ids = [aws_security_group.default.id]
