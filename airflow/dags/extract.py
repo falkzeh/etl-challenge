@@ -16,6 +16,7 @@ class PopcoreChallenge:
     def __init__(
         self,
         url: str,
+        date_column: str = "date",
         table_name: str = None,
         db_user: str = os.getenv("MYSQL_USER"),
         db_password: str = os.getenv("MYSQL_PW"),
@@ -27,6 +28,7 @@ class PopcoreChallenge:
 
         Args:
             url (str): url to csv file
+            date_column (str): name of date column for data validation. Defaults to "date".
             table_name (str): name of table in database. Defaults to None.
             db_user (str, optional): database user. Defaults to os.getenv("MYSQL_USER").
             db_password (str, optional): database password. Defaults to os.getenv("MYSQL_PW").
@@ -34,6 +36,7 @@ class PopcoreChallenge:
             db_database (str, optional): database name. Defaults to os.getenv("MYSQL_DB").
         """
         self.url = url
+        self.date_column = date_column
         self.table_name = table_name
         self.db_user = db_user
         self.db_password = db_password
@@ -90,6 +93,26 @@ class PopcoreChallenge:
         logging.info("Database engine successfully loaded")
         return create_engine(url)
 
+    def validate_data(self, df: pd.DataFrame) -> bool:
+        """
+        Validate the data quality and availability.
+
+        Args:
+            df (pd.DataFrame): pandas dataframe
+
+        Returns:
+            bool: True if data is valid, False otherwise
+        """
+        threshold = dt.timedelta(days=2)
+        df[self.date_column] = pd.to_datetime(df[self.date_column])
+        latest_date = df[self.date_column].max()
+        if (dt.datetime.now() - latest_date) > threshold:
+            logging.error("Data validation failed: Data is outdated")
+            return False
+
+        logging.info("Data validation passed")
+        return True
+
     def execute(self):
         """
         Execute the ETL process.
@@ -97,6 +120,11 @@ class PopcoreChallenge:
         engine = self.get_engine()
         table_name = self.get_table_name(self.url)
         df = self.get_csv_data(self.url)
+
+        if not self.validate_data(df):
+            logging.error("Data validation failed. ETL process aborted.")
+            return
+
         with engine.connect() as conn:
             df.to_sql(
                 name=table_name,
