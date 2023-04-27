@@ -7,6 +7,9 @@ Hi Ganesh, Nacho and Marko! Thank you for giving me the opportunity to take this
     - [Airflow](#airflow)
     - [MySQL](#mysql)
   - [Exaplaining the Code](#exaplaining-the-code)
+    - [extract.py](#extractpy)
+    - [pipeline.py](#pipelinepy)
+  - [Bringing the sets together](#bringing-the-sets-together)
 ## Setup
 To tackle this challenge I decided to use Airflow as a workflow manager. I have used it in the past and I think it is a great tool for this kind of task. I have also used Docker to make the setup easier. For the database I decided to go with MySQL on AWS because it is a service that I am familiar with and it is easy to setup. For the deployment I used terraform in order to have a reproducible infrastructure, versioning and to be able to scale it easily if needed (Plus I can be sure to delete everything without being charged after the challenge is completed).
 
@@ -20,9 +23,12 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 Then you start the Airflow server with docker compose (if you haven't installed docker compose you can find more information [here](https://docs.docker.com/compose/)). 
+
+Please note that I had to create a custom Airflow image in order to install some additional packages such aus the mysql client oder python-dotenv. You can find the Dockerfile in the `airflow` folder.
 ```bash
 cd airflow
-docker compose up -d
+docker-compose build
+docker-compose up -d
 ```
 You can access the UI at http://localhost:8080 (username and password are both 'airflow'). We can see that the server is running and that the DAG is paused.
 ![airflow](screenshots/1_airflow_running.png)
@@ -40,6 +46,7 @@ select * from covid_hospitalizations limit 5;
 ## Exaplaining the Code
 You can find the full code in the `airflow/dags` folder. I will explain the code function by function. Please not that I would normally add the `.env` file to the `.gitignore` file but I left it in for the sake of this challenge.
 
+### extract.py
 First, I initialize the `PopcoreChallenge` class with the url to the csv file and the database credentials. I also set the default values for the date column and the table name. I use the `load_dotenv()` function to load the credentials from the `.env` file. I also set the logging level to `INFO` so that we can see the logs in the Airflow UI.
 ```python
 load_dotenv()
@@ -191,3 +198,80 @@ def execute(self):
             f"Data from {self.url} successfully loaded into table {table_name}"
         )
 ```
+
+### pipeline.py
+The `pipeline.py` file contains the DAG definition. The `PopcoreChallenge` class is instantiated with the url to the csv file. The `execute()` function is called to load the data into the database.
+```python
+from datetime import datetime, timedelta
+from airflow import DAG
+from airflow.operators.python_operator import PythonOperator
+from extract import PopcoreChallenge
+
+
+def run_popcore_challenge(url: str):
+    etl = PopcoreChallenge(url=url)
+    etl.execute()
+
+default_args = {
+    "owner": "airflow",
+    "depends_on_past": False,
+    "start_date": datetime(2023, 4, 27),
+    "email_on_failure": False,
+    "email_on_retry": False,
+    "retries": 1,
+    "retry_delay": timedelta(minutes=5),
+}
+
+dag = DAG(
+    "popcore_challenge",
+    default_args=default_args,
+    description="A DAG to run PopcoreChallenge",
+    schedule_interval=timedelta(days=1),
+    catchup=False,
+)
+
+owid_covid_data = PythonOperator(
+    task_id="owid_covid_data",
+    python_callable=run_popcore_challenge,
+    op_args=["https://covid.ourworldindata.org/data/owid-covid-data.csv"],
+    dag=dag,
+)
+
+covid_hospitalizations = PythonOperator(
+    task_id="covid_hospitalizations",
+    python_callable=run_popcore_challenge,
+    op_args=["https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/hospitalizations/covid-hospitalizations.csv"],
+    dag=dag,
+)
+
+owid_covid_data >> covid_hospitalizations
+```
+
+In the Airflow UI you can see the DAG and the tasks. The `owid_covid_data` task is scheduled to run first and the `covid_hospitalizations` task is scheduled to run after the `owid_covid_data` task has finished successfully.
+![DAG](screenshots/3_dag.png)
+
+## Bringing the sets together
+Combining the two sets could either be done via SQL in e.g. `dbt`:
+```sql
+select *
+from owid_covid_data covid_data
+left join covid_hospitalizations hospitalizations
+       on covid_data.date = hospitalizations.date
+      and covid_data.iso_code = hospitalizations.iso_code
+      and covid_data.location = hospitalizations.entity;
+```
+
+Or via `pandas` within the DAG:
+```python
+import pandas as pd
+
+df = pd.merge(
+    left=owid_covid_data,
+    right=covid_hospitalizations,
+    how="left",
+    left_on=["date", "iso_code", "location"],
+    right_on=["date", "iso_code", "entity"],
+)
+```
+
+Eventhough my preference would probably be the `dbt` approach since it is more transparent and easier to maintain, I also see value in the `pandas` approach because it is more flexible since you can easily change the join type and the join columns. The `dbt` approach would require you to change the SQL query.
