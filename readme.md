@@ -6,7 +6,7 @@ Hi Ganesh, Nacho and Marko! Thank you for giving me the opportunity to take this
   - [Setup](#setup)
     - [Airflow](#airflow)
     - [MySQL](#mysql)
-  - [Exaplaining the Code](#exaplaining-the-code)
+  - [Explaining the Code](#explaining-the-code)
     - [extract.py](#extractpy)
     - [pipeline.py](#pipelinepy)
   - [Bringing the sets together](#bringing-the-sets-together)
@@ -24,7 +24,7 @@ pip install -r requirements.txt
 ```
 Then you start the Airflow server with docker compose (if you haven't installed docker compose you can find more information [here](https://docs.docker.com/compose/)). 
 
-Please note that I had to create a custom Airflow image in order to install some additional packages such aus the mysql client oder python-dotenv. You can find the Dockerfile in the `airflow` folder.
+Please note that I had to create a custom Airflow image in order to install some additional packages such as the mysql client or python-dotenv. You can find the Dockerfile in the `airflow` folder.
 ```bash
 cd airflow
 docker-compose build
@@ -43,7 +43,7 @@ select * from owid_covid_data limit 5;
 select * from covid_hospitalizations limit 5;
 ```
 
-## Exaplaining the Code
+## Explaining the Code
 You can find the full code in the `airflow/dags` folder. I will explain the code function by function. Please not that I would normally add the `.env` file to the `.gitignore` file but I left it in for the sake of this challenge.
 
 ### extract.py
