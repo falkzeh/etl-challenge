@@ -270,7 +270,6 @@ df = pd.merge(
     right=covid_hospitalizations,
     how="left",
     left_on=["date", "iso_code", "location"],
-    right_on=["date", "iso_code", "entity"],
 )
 ```
 
