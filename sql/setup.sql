@@ -1,2 +1,2 @@
 # Create db in new RDS
-create database popcore;
+create database mychallenge;

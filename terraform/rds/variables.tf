@@ -1,5 +1,5 @@
 variable "name" {
-  default     = "popcore"
+  default     = "mychallenge"
 }
 
 variable "environment" {
@@ -17,10 +17,10 @@ variable "cidr_block" {
 
 variable "db_username" {
   description = "Username for the RDS MySQL instance"
-  default = "popcore"
+  default = "mychallenge"
 }
 
 variable "db_password" {
   description = "Password for the RDS MySQL instance"
-  default = "popcore-secret"
+  default = "mychallenge-secret"
 }

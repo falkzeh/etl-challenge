@@ -12,7 +12,7 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 
 
-class PopcoreChallenge:
+class MyChallenge:
     def __init__(
         self,
         url: str,
@@ -24,7 +24,7 @@ class PopcoreChallenge:
         db_database: str = os.getenv("MYSQL_DB"),
     ) -> None:
         """
-        Initialize PopcoreChallenge class with MySQL database credentials and url to csv file.
+        Initialize MyChallenge class with MySQL database credentials and url to csv file.
 
         Args:
             url (str): url to csv file

@@ -1,15 +1,15 @@
-# Popcore Challenge
+# ETL Challenge
 
-Hi Ganesh, Nacho and Marko! Thank you for giving me the opportunity to take this challenge. I had a lot of fun working on it and I am looking forward to hearing from you. I have tried to make the setup as easy as possible. If you have any questions or if you need any help please let me know! :)
+This project showcases my skills in building an ETL (Extract, Transform, Load) pipeline for data processing. It demonstrates my ability to design and implement a robust workflow using popular tools and technologies.
 
-- [Popcore Challenge](#popcore-challenge)
-  - [Setup](#setup)
-    - [Airflow](#airflow)
-    - [MySQL](#mysql)
-  - [Explaining the Code](#explaining-the-code)
-    - [extract.py](#extractpy)
-    - [pipeline.py](#pipelinepy)
-  - [Bringing the sets together](#bringing-the-sets-together)
+The solution presented here was initially developed as part of a challenge and has been modified to remove any references to the specific challenge or associated company. By focusing on the technical aspects and removing company-specific information, this project serves as a general example of my coding skills and proficiency in handling data processing tasks.
+
+## Data Source
+
+For this example I’m using the Covid-19 Datasets of Our World in Data:
+
+https://github.com/owid/covid-19-data
+
 ## Setup
 To tackle this challenge I decided to use Airflow as a workflow manager. I have used it in the past and I think it is a great tool for this kind of task. I have also used Docker to make the setup easier. For the database I decided to go with MySQL on AWS because it is a service that I am familiar with and it is easy to setup. For the deployment I used terraform in order to have a reproducible infrastructure, versioning and to be able to scale it easily if needed (Plus I can be sure to delete everything without being charged after the challenge is completed).
 
@@ -37,7 +37,7 @@ You can access the UI at http://localhost:8080 (username and password are both '
 In order to access the MySQL database you can use the credentials stored in the `.env` file. If you're for example using DataGrip you can create a new connection and it should look like this:
 ![mysql](screenshots/2_datagrip.png)
 
-The two tables are in the `popcore` database:
+The two tables are in the database:
 ```sql
 select * from owid_covid_data limit 5;
 select * from covid_hospitalizations limit 5;
@@ -47,13 +47,13 @@ select * from covid_hospitalizations limit 5;
 You can find the full code in the `airflow/dags` folder. I will explain the code function by function. Please not that I would normally add the `.env` file to the `.gitignore` file but I left it in for the sake of this challenge.
 
 ### extract.py
-First, I initialize the `PopcoreChallenge` class with the url to the csv file and the database credentials. I also set the default values for the date column and the table name. I use the `load_dotenv()` function to load the credentials from the `.env` file. I also set the logging level to `INFO` so that we can see the logs in the Airflow UI.
+First, I initialize the `MyChallenge` class with the url to the csv file and the database credentials. I also set the default values for the date column and the table name. I use the `load_dotenv()` function to load the credentials from the `.env` file. I also set the logging level to `INFO` so that we can see the logs in the Airflow UI.
 ```python
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
 
 
-class PopcoreChallenge:
+class MyChallenge:
     def __init__(
         self,
         url: str,
@@ -65,7 +65,7 @@ class PopcoreChallenge:
         db_database: str = os.getenv("MYSQL_DB"),
     ) -> None:
         """
-        Initialize PopcoreChallenge class with MySQL database credentials and url to csv file.
+        Initialize MyChallenge class with MySQL database credentials and url to csv file.
 
         Args:
             url (str): url to csv file
@@ -200,16 +200,16 @@ def execute(self):
 ```
 
 ### pipeline.py
-The `pipeline.py` file contains the DAG definition. The `PopcoreChallenge` class is instantiated with the url to the csv file. The `execute()` function is called to load the data into the database.
+The `pipeline.py` file contains the DAG definition. The `MyChallenge` class is instantiated with the url to the csv file. The `execute()` function is called to load the data into the database.
 ```python
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
-from extract import PopcoreChallenge
+from extract import MyChallenge
 
 
-def run_popcore_challenge(url: str):
-    etl = PopcoreChallenge(url=url)
+def run_My_challenge(url: str):
+    etl = MyChallenge(url=url)
     etl.execute()
 
 default_args = {
@@ -223,23 +223,23 @@ default_args = {
 }
 
 dag = DAG(
-    "popcore_challenge",
+    "My_challenge",
     default_args=default_args,
-    description="A DAG to run PopcoreChallenge",
+    description="A DAG to run MyChallenge",
     schedule_interval=timedelta(days=1),
     catchup=False,
 )
 
 owid_covid_data = PythonOperator(
     task_id="owid_covid_data",
-    python_callable=run_popcore_challenge,
+    python_callable=run_My_challenge,
     op_args=["https://covid.ourworldindata.org/data/owid-covid-data.csv"],
     dag=dag,
 )
 
 covid_hospitalizations = PythonOperator(
     task_id="covid_hospitalizations",
-    python_callable=run_popcore_challenge,
+    python_callable=run_My_challenge,
     op_args=["https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/hospitalizations/covid-hospitalizations.csv"],
     dag=dag,
 )
